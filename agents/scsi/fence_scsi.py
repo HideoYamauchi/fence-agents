@@ -50,7 +50,7 @@ def set_status(conn, options):
 			dev_write(dev, options)
 
 			if get_reservation_key(options, dev) is None \
-			and not reserve_dev(options, dev) \
+			and not reserve_dev(options, dev, options["--key"]) \
 			and get_reservation_key(options, dev) is None:
 				count += 1
 				logging.debug("Failed to create reservation (key="\
@@ -155,7 +155,7 @@ def register_dev(options, dev, key):
 		# it will be registered before preempt.
 		if get_reservation_key(options, dev) is None:
 			logging.debug("Re-register the device reservation.(key=" + key + ", device=" + dev + ")\n")
-			if not reserve_dev(options, dev) and get_reservation_key(options, dev) is None:
+			if not reserve_dev(options, dev, key) and get_reservation_key(options, dev) is None:
 				logging.debug("Failed to create reservation (key=" + key + ", device=" + dev + ")\n")
 				return False
 		# If key matches, make sure it matches with the connection that
@@ -184,9 +184,9 @@ def register_helper(options, dev, key):
 	return not bool(run_cmd(options, cmd)["rc"])
 
 
-def reserve_dev(options, dev):
+def reserve_dev(options, dev, key):
 	reset_dev(options,dev)
-	cmd = options["--sg_persist-path"] + " -n -o -R -T 5 -K " + options["--key"] + " -d " + dev
+	cmd = options["--sg_persist-path"] + " -n -o -R -T 5 -K " + key + " -d " + dev
 	return not bool(run_cmd(options, cmd)["rc"])
 
 
