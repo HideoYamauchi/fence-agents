@@ -150,6 +150,14 @@ def register_dev(options, dev, key):
 		return False
 
 	if registration_key_exists:
+		# In order to avoid the issue of the key registration being removed
+		# when there is no reservation with preempt, if there is no reservation,
+		# it will be registered before preempt.
+		if get_reservation_key(options, dev) is None:
+			logging.debug("Re-register the device reservation.(key=" + key + ", device=" + dev + ")\n")
+			if not reserve_dev(options, dev) and get_reservation_key(options, dev) is None:
+				logging.debug("Failed to create reservation (key=" + key + ", device=" + dev + ")\n")
+				return False
 		# If key matches, make sure it matches with the connection that
 		# exists right now. To do this, we can issue a preempt with same key
 		# which should replace the old invalid entries from the target.
