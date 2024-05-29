@@ -36,7 +36,7 @@ def set_status(conn, options):
 		for dev in options["devices"]:
 			is_block_device(dev)
 
-			register_dev(options, options["--key"], dev)
+			register_dev(options, options["--plug"], dev)
 			if options["--plug"] not in get_registration_keys(options, dev):
 				count += 1
 				logging.debug("Failed to register key "\
@@ -56,7 +56,7 @@ def set_status(conn, options):
 
 		for dev in options["devices"]:
 			is_block_device(dev)
-			register_dev(options, options["--key"], dev)
+			register_dev(options, dev_keys[dev], dev)
 
 			if options["--plug"] in get_registration_keys(options, dev):
 				preempt_abort(options, dev_keys[dev], dev)
