@@ -36,7 +36,7 @@ def set_status(conn, options):
 		for dev in options["devices"]:
 			is_block_device(dev)
 
-			register_dev(options, dev)
+			register_dev(options, options["--plug"], dev)
 			if options["--plug"] not in get_registration_keys(options, dev):
 				count += 1
 				logging.debug("Failed to register key "\
@@ -56,6 +56,7 @@ def set_status(conn, options):
 
 		for dev in options["devices"]:
 			is_block_device(dev)
+			register_dev(options, dev_keys[dev], dev)
 
 			if options["--plug"] in get_registration_keys(options, dev):
 				preempt_abort(options, dev_keys[dev], dev)
@@ -99,13 +100,42 @@ def is_block_device(dev):
 	if not stat.S_ISBLK(os.stat(dev).st_mode):
 		fail_usage("Failed: device \"" + dev + "\" is not a block device")
 
+# function to preempt host with 'key' using 'host_key' without aborting tasks
+def preempt(options, host, dev):
+    cmd = options["--mpathpersist-path"] + " -o -P --prout-type=5 --param-rk=" + host +" --param-sark=" + host +" -d " + dev
+    return not bool(run_cmd(options, cmd)["rc"])
+
 # cancel registration
 def preempt_abort(options, host, dev):
 	cmd = options["--mpathpersist-path"] + " -o --preempt-abort --prout-type=5 --param-rk=" + host +" --param-sark=" + options["--plug"] +" -d " + dev
 	return not bool(run_cmd(options, cmd)["rc"])
 
-def register_dev(options, dev):
-	cmd = options["--mpathpersist-path"] + " -o --register --param-sark=" + options["--plug"] + " -d " + dev
+def register_dev(options, host, dev):
+	# Check if any registration exists for the key already. We track this in
+	# order to decide whether the existing registration needs to be cleared.
+	# This is needed since the previous registration could be for a
+	registration_key_exists = False
+	if host in get_registration_keys(options, dev):
+		logging.debug("Registration key exists for device " + dev)
+		registration_key_exists = True
+	if not register_helper(options, host, dev):
+		return False
+
+	if registration_key_exists:
+		# If key matches, make sure it matches with the connection that
+		# exists right now. To do this, we can issue a preempt with same key
+		# which should replace the old invalid entries from the target.
+		if not preempt(options, host, dev):
+			return False
+		# If there was no reservation, we need to issue another registration
+		# since the previous preempt would clear registration made above.
+		if get_reservation_key(options, dev) != host:
+			return register_helper(options, host, dev)
+
+	return True
+
+def register_helper(options, host, dev):
+	cmd = options["--mpathpersist-path"] + " -o --register --param-sark=" + host + " -d " + dev
 	#cmd return code != 0 but registration can be successful
 	return not bool(run_cmd(options, cmd)["rc"])
 
