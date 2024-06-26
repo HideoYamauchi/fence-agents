@@ -135,7 +135,7 @@ def register_dev(options, host, dev):
 	return True
 
 def register_helper(options, host, dev):
-	cmd = options["--mpathpersist-path"] + " -o --register --param-sark=" + host + " -d " + dev
+	cmd = options["--mpathpersist-path"] + " -o --register-ignore --param-sark=" + host + " -d " + dev
 	#cmd return code != 0 but registration can be successful
 	return not bool(run_cmd(options, cmd)["rc"])
 
