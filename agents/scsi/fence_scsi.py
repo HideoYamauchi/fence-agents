@@ -131,13 +131,13 @@ def reset_dev(options, dev):
 	return run_cmd(options, options["--sg_turs-path"] + " " + dev)["rc"]
 
 
-def register_dev(options, dev, key, do_preempt=True):
+def register_dev(options, dev, key, do_preempt=True, do_multipath=False):
 	dev = os.path.realpath(dev)
 	if options.get("--mpath-register-method") == "multi" and re.search(r"^dm", dev[5:]):
 		devices = get_mpath_slaves(dev)
-		register_dev(options, devices[0], key)
+		register_dev(options, devices[0], key, True, True)
 		for device in devices[1:]:
-			register_dev(options, device, key, False)
+			register_dev(options, device, key, False, True)
 		return True
 
 	# Check if any registration exists for the key already. We track this in
@@ -145,7 +145,7 @@ def register_dev(options, dev, key, do_preempt=True):
 	# This is needed since the previous registration could be for a
 	# different I_T nexus (different ISID).
 	registration_key_exists = False
-	if key in get_registration_keys(options, dev):
+	if key in get_registration_keys(options, dev, False if do_multipath else None):
 		logging.debug("Registration key exists for device " + dev)
 		registration_key_exists = True
 	if not register_helper(options, dev, key):
